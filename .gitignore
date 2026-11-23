@@ -39,3 +39,20 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# android signing: NEVER commit these (the release workflow rebuilds them from GitHub secrets)
+*.jks
+*.keystore
+keystore.properties
+
+# tauri / rust build output
+/src-tauri/target/
+
+# android build output (the project itself in src-tauri/gen/android IS committed)
+/src-tauri/gen/android/.gradle/
+/src-tauri/gen/android/build/
+/src-tauri/gen/android/app/build/
+/src-tauri/gen/android/local.properties
+/src-tauri/gen/android/app/tauri.properties
+*.apk
+*.aab

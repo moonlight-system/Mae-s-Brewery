@@ -1,26 +1,77 @@
-@import "tailwindcss";
+/* Only scan the app folder for Tailwind classes. By default Tailwind scans the whole
+   project, including src-tauri/target, where the Rust build locks files and crashes Turbopack. */
+@import "tailwindcss" source("../app");
+@source not "../src-tauri";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background_1: #171717;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html,
+body {
+  background-color: var(--background_1);
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  /* App feel on a phone: no pull-to-refresh bounce, no grey flash when tapping */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* No 300ms delay / double-tap zoom on buttons */
+button,
+summary {
+  touch-action: manipulation;
+}
+
+.home_container {
+  background-color: var(--background_1);
+  color: #f5f5f5;
+  width: 100%;
+  min-height: 100dvh;
+}
+
+/* Each liquid layer rises from the bottom of its own slot */
+@keyframes pour {
+  from { transform: scaleY(0); }
+  to   { transform: scaleY(1); }
+}
+
+@keyframes settle {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+/* The phone menu slides in from the right edge */
+@keyframes drawer-in {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.layer {
+  transform-origin: bottom;
+  animation: pour 450ms linear both;
+}
+
+.layer-label {
+  animation: settle 400ms ease-out both;
+}
+
+/* Phone menu */
+.drawer {
+  animation: drawer-in 220ms ease-out both;
+}
+
+.fade-in {
+  animation: settle 220ms ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .layer,
+  .layer-label,
+  .drawer,
+  .fade-in {
+    animation: none;
+  }
 }

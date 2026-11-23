@@ -1,0 +1,44 @@
+{
+  "ingredients": {
+    "alcohol":            { "name": "Alcool",                     "color": "#DDDDDD" },
+
+    "vodka":              { "name": "Vodka",                      "color": "#E8F1F5" },
+    "gin":                { "name": "Gin",                        "color": "#EAF4F4" },
+    "whiskey":            { "name": "Whiskey",                    "color": "#B8681A" },
+    "rhum":               { "name": "Rhum",                       "color": "#D18411" },
+    "cognac":             { "name": "Cognac",                     "color": "#D6710D" },
+    "tequila":            { "name": "Tequila",                    "color": "#DED8C5" },
+    "triple sec":         { "name": "Triple sec / Cointreau",     "color": "#F09516" },
+    "limoncello":         { "name": "Limoncello",                 "color": "#FFE159" },
+    "amaretto":           { "name": "Amaretto",                   "color": "#9C613A" },
+
+    "coffee liquor":      { "name": "Liqueur de café",            "color": "#332406" },
+    "blackberry liquor":  { "name": "Liqueur de mure",            "color": "#4A075C" },
+    "peach liquor":       { "name": "Liqueur de pêche",           "color": "#F7B56F" },
+
+    "whiskey cream":      { "name": "Crème de whiskey / Baileys", "color": "#E3B46D" },
+
+    "honey syrup":        { "name": "Sirop de miel",              "color": "#FFA600"},
+    "raspberry syrup":    { "name": "Sirop de framboise",         "color": "#FF006A"},
+
+    "ginger_beer":        { "name": "Ginger beer",                "color": "#E3C16F" },
+    "sparkling water":    { "name": "Eau pétillante",             "color": "#ADFFFF" },
+    "apple juice":        { "name": "Jus de pomme",               "color": "#FFAE45" },
+    "orange juice":       { "name": "Jus d'orange",               "color": "#FF9500" },
+    "pineapple juice":    { "name": "Jus d'ananas",               "color": "#FFE057" },
+    "cranberry juice":    { "name": "Jus de cranberry",           "color": "#FF3B42" },
+
+    "lime juice":         { "name": "Jus de citron vert",         "color": "#A4D65E" },
+    "sugar":              { "name": "Sucre",                      "color": "#DDDDDD" },
+    "lime":               { "name": "Citron vert",                "color": "#A4D65E" },
+    "mint leaves":        { "name": "Feuilles de menthe",         "color": "#3FA34D" },
+    "ice":                { "name": "Glaçons",                    "color": "#CDEBFA" },
+    "egg white":          { "name": "Blanc d'oeuf",               "color": "#A3A09B" },
+    "angostura":          { "name": "Angostura",                  "color": "#2E0000"},
+    "rhubarb bitter":     { "name": "Bitter de rhubarbe",         "color": "#CC7100"}
+  },
+
+  "cocktails": {
+  
+  }
+}
