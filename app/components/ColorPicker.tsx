@@ -1,5 +1,5 @@
 "use client";
-
+import { useBackHandler } from "../lib/backStack";
 import {
   useEffect,
   useRef,
@@ -138,6 +138,8 @@ function ColorSheet({
     setHexText(hsvToHex(next));
   }
 
+  useBackHandler(true, onClose);
+  
   // Escape closes only this sheet, not the editor underneath it
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

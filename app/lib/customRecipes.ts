@@ -5,6 +5,7 @@ import {
   type Recipes,
   type Step,
 } from "./recipes";
+import { EMPTY_ORG, cleanOrganisation, type Organisation } from "./organize";
 
 /**
  * recipes.json is compiled into the app, so it can't be written to on a phone.
@@ -25,6 +26,8 @@ export type CustomData = {
   hidden: string[];
   /** Ids of bundled ingredients the user deleted */
   hiddenIngredients: string[];
+  /** Folders and ordering of the recipe list */
+  organisation: Organisation;
 };
 
 export const EMPTY_CUSTOM: CustomData = {
@@ -32,6 +35,7 @@ export const EMPTY_CUSTOM: CustomData = {
   ingredients: {},
   hidden: [],
   hiddenIngredients: [],
+  organisation: EMPTY_ORG,
 };
 
 export function loadCustom(): CustomData {
@@ -46,6 +50,7 @@ export function loadCustom(): CustomData {
       hiddenIngredients: Array.isArray(parsed.hiddenIngredients)
         ? parsed.hiddenIngredients
         : [],
+      organisation: cleanOrganisation((parsed as { organisation?: unknown }).organisation),
     };
   } catch {
     return EMPTY_CUSTOM;

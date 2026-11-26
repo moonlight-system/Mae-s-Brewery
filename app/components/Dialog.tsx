@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type ReactNode } from "react";
+import { useBackHandler } from "../lib/backStack";
 
 /** Small dialog over the page: a bottom sheet on a phone, centered on a wide screen. */
 export default function Dialog({
@@ -12,6 +13,7 @@ export default function Dialog({
   onClose: () => void;
   children: ReactNode;
 }) {
+  useBackHandler(true, onClose);
   // Escape closes only this dialog, not the page underneath it
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

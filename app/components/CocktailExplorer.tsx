@@ -31,6 +31,16 @@ import IngredientManager from "./IngredientManager";
 import RecipeEditor from "./RecipeEditor";
 import RecipeTransfer from "./RecipeTransfer";
 import UpdateBanner from "./UpdateBanner";
+import { useBackHandler } from "../lib/backStack";
+import BackButton from "./BackButton";
+import { usedIngredientIds } from "../lib/customRecipes"; // add to the existing customRecipes import
+import {
+  buildTree, createFolder, deleteFolder, moveFolder, moveRecipe,
+  moveToFolder, renameFolder, type Organisation,
+} from "../lib/organize";
+import FolderDialogs, { type FolderDialogState } from "./FolderDialogs";
+import IngredientFilter from "./IngredientFilter";
+
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70";
@@ -237,8 +247,6 @@ function CocktailTitle({
   );
 }
 
-type Group = { title: string; ids: string[] };
-
 /** One recipe in the list. Tap to open it, hold (or right-click) for its menu. */
 function RecipeItem({
   id,
@@ -319,62 +327,179 @@ function RecipeItem({
   );
 }
 
-/** Collapsible lists of cocktails and shots, used in the side panel and in the phone menu. */
+type Section = { key: string; title: string; ids: string[]; folderId?: string };
+
+function MiniButton({
+  label, path, onClick, disabled, danger,
+}: { label: string; path: string; onClick: () => void; disabled?: boolean; danger?: boolean }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      aria-label={label}
+      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-neutral-300 hover:bg-white/10 disabled:opacity-25 disabled:hover:bg-transparent ${
+        danger ? "hover:text-red-400" : ""
+      } ${focusRing}`}
+    >
+      <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor"
+        strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+        <path d={path} />
+      </svg>
+    </button>
+  );
+}
+
+const ICON = {
+  up: "M6 15l6-6 6 6",
+  down: "M6 9l6 6 6-6",
+  folder: "M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",
+  edit: "M4 20h4l10-10-4-4L4 16z",
+  trash: "M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3",
+};
+
+/** Collapsible folders, then the cocktails and shots that are not in a folder. */
 function RecipeList({
-  groups,
-  cocktails,
-  activeId,
-  onSelect,
-  onLongPress,
+  sections, cocktails, activeId, organizing,
+  onSelect, onLongPress, onMoveRecipe, onPickFolder,
+  onMoveFolder, onRenameFolder, onDeleteFolder,
 }: {
-  groups: Group[];
+  sections: Section[];
   cocktails: Record<string, Cocktail>;
   activeId: string;
+  organizing: boolean;
   onSelect: (id: string) => void;
   onLongPress: (id: string) => void;
+  onMoveRecipe: (siblings: string[], id: string, delta: -1 | 1) => void;
+  onPickFolder: (recipeId: string) => void;
+  onMoveFolder: (folderId: string, delta: -1 | 1) => void;
+  onRenameFolder: (folderId: string) => void;
+  onDeleteFolder: (folderId: string) => void;
 }) {
-  if (groups.length === 0) {
+  if (sections.length === 0) {
     return <p className="px-3 text-sm text-neutral-500">Aucune recette.</p>;
   }
+  const folderIds = sections.flatMap((s) => (s.folderId ? [s.folderId] : []));
 
   return (
     <div className="flex flex-col gap-3">
-      {groups.map((group) => (
-        <details key={group.title} open className="group">
-          <summary
-            className={`flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-neutral-400 transition-colors hover:text-neutral-200 ${focusRing} [&::-webkit-details-marker]:hidden`}
-          >
-            <svg
-              viewBox="0 0 24 24"
-              className="h-4 w-4 transition-transform group-open:rotate-90"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              aria-hidden="true"
+      {sections.map((section) => {
+        const fi = section.folderId ? folderIds.indexOf(section.folderId) : -1;
+        return (
+          <details key={section.key} open className="group">
+            <summary
+              className={`flex cursor-pointer list-none items-center gap-2 rounded-md px-3 py-2 text-sm font-medium text-neutral-400 transition-colors hover:text-neutral-200 ${focusRing} [&::-webkit-details-marker]:hidden`}
             >
-              <path d="M9 6l6 6-6 6" />
-            </svg>
-            {group.title}
-            <span className="text-neutral-600">{group.ids.length}</span>
-          </summary>
+              <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0 transition-transform group-open:rotate-90"
+                fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"
+                strokeLinejoin="round" aria-hidden="true">
+                <path d="M9 6l6 6-6 6" />
+              </svg>
+              {section.folderId && (
+                <svg viewBox="0 0 24 24" className="h-4 w-4 shrink-0" fill="none" stroke="currentColor"
+                  strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                  <path d={ICON.folder} />
+                </svg>
+              )}
+              <span className="min-w-0 truncate">{section.title}</span>
+              <span className="text-neutral-600">{section.ids.length}</span>
+            </summary>
 
-          <ul className="mt-1 flex flex-col gap-1">
-            {group.ids.map((id) => (
-              <li key={id}>
-                <RecipeItem
-                  id={id}
-                  cocktail={cocktails[id]}
-                  active={id === activeId}
-                  onSelect={onSelect}
-                  onLongPress={onLongPress}
-                />
-              </li>
-            ))}
-          </ul>
-        </details>
-      ))}
+            {organizing && section.folderId && (
+              <div className="mt-1 flex items-center gap-0.5 px-2">
+                <MiniButton label="Monter le dossier" path={ICON.up} disabled={fi === 0}
+                  onClick={() => onMoveFolder(section.folderId!, -1)} />
+                <MiniButton label="Descendre le dossier" path={ICON.down} disabled={fi === folderIds.length - 1}
+                  onClick={() => onMoveFolder(section.folderId!, 1)} />
+                <MiniButton label="Renommer le dossier" path={ICON.edit}
+                  onClick={() => onRenameFolder(section.folderId!)} />
+                <MiniButton label="Supprimer le dossier" path={ICON.trash} danger
+                  onClick={() => onDeleteFolder(section.folderId!)} />
+              </div>
+            )}
+
+            <ul className={`mt-1 flex flex-col gap-1 ${section.folderId ? "ml-3 border-l border-white/10 pl-1" : ""}`}>
+              {section.ids.length === 0 && (
+                <li className="px-3 py-2 text-sm text-neutral-600">Dossier vide</li>
+              )}
+              {section.ids.map((id, i) => (
+                <li key={id} className="flex items-center gap-0.5">
+                  <div className="min-w-0 flex-1">
+                    <RecipeItem id={id} cocktail={cocktails[id]} active={id === activeId}
+                      onSelect={onSelect} onLongPress={onLongPress} />
+                  </div>
+                  {organizing && (
+                    <>
+                      <MiniButton label="Monter" path={ICON.up} disabled={i === 0}
+                        onClick={() => onMoveRecipe(section.ids, id, -1)} />
+                      <MiniButton label="Descendre" path={ICON.down} disabled={i === section.ids.length - 1}
+                        onClick={() => onMoveRecipe(section.ids, id, 1)} />
+                      <MiniButton label="Déplacer vers un dossier" path={ICON.folder}
+                        onClick={() => onPickFolder(id)} />
+                    </>
+                  )}
+                </li>
+              ))}
+            </ul>
+          </details>
+        );
+      })}
+    </div>
+  );
+}
+
+/** Top of the recipe list: new folder, ingredient filter, organise mode. */
+function ListToolbar({
+  organizing, filterCount, onCreateFolder, onToggleOrganize, onFilter,
+}: {
+  organizing: boolean;
+  filterCount: number;
+  onCreateFolder: () => void;
+  onToggleOrganize: () => void;
+  onFilter: () => void;
+}) {
+  const btn = `flex items-center justify-center gap-2 rounded-lg border border-white/25 px-3 py-2.5 text-sm text-neutral-200 transition-colors hover:bg-white/5 ${focusRing}`;
+  return (
+    <div className="mb-4 flex flex-col gap-2">
+      <button type="button" onClick={onCreateFolder} className={`${btn} bg-white/5`}>
+        ＋ Nouveau dossier
+      </button>
+      <div className="grid grid-cols-2 gap-2">
+        <button type="button" onClick={onFilter}
+          className={`${btn} ${filterCount > 0 ? "!border-white/60" : ""}`}>
+          Ingrédients{filterCount > 0 ? ` (${filterCount})` : ""}
+        </button>
+        <button type="button" aria-pressed={organizing} onClick={onToggleOrganize}
+          className={`${btn} ${organizing ? "!border-white !bg-white !text-neutral-900" : ""}`}>
+          {organizing ? "Terminé" : "Organiser"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/** Selected ingredients as removable chips, and how many recipes match. */
+function ActiveFilterBar({
+  names, count, onRemove, onClear,
+}: { names: { id: string; name: string }[]; count: number; onRemove: (id: string) => void; onClear: () => void }) {
+  return (
+    <div className="mb-3">
+      <div className="flex flex-wrap items-center gap-1.5 px-1">
+        {names.map(({ id, name }) => (
+          <button key={id} type="button" onClick={() => onRemove(id)}
+            aria-label={`Retirer ${name} du filtre`}
+            className={`rounded-full border border-white/40 px-2.5 py-1 text-xs text-neutral-200 ${focusRing}`}>
+            {name} ✕
+          </button>
+        ))}
+        <button type="button" onClick={onClear}
+          className={`px-2 py-1 text-xs text-neutral-400 hover:text-neutral-200 ${focusRing}`}>
+          Effacer
+        </button>
+      </div>
+      <p className="px-3 pt-2 text-xs text-neutral-500">
+        {count} recette{count > 1 ? "s" : ""}
+      </p>
     </div>
   );
 }
@@ -483,14 +608,18 @@ function RecipeActionSheet({
   onEdit,
   onDelete,
   onClose,
+  onMove
 }: {
   name: string;
   builtin: boolean;
   onEdit: () => void;
   onDelete: () => void;
   onClose: () => void;
+  onMove: () => void
 }) {
   const [confirming, setConfirming] = useState(false);
+
+  useBackHandler(true, onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -550,6 +679,9 @@ function RecipeActionSheet({
               className={`${rowClass} text-neutral-100 hover:bg-white/10`}
             >
               Modifier
+            </button>
+            <button type="button" onClick={onMove} className={`${rowClass} text-neutral-100 hover:bg-white/10`}>
+              Déplacer vers un dossier
             </button>
             <button
               type="button"
@@ -917,6 +1049,14 @@ export default function CocktailExplorer() {
   const mainHeight = mainSize?.h ?? null;
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
+  const [folderDialog, setFolderDialog] = useState<FolderDialogState>(null);
+  const [organizing, setOrganizing] = useState(false);
+  const [filterOpen, setFilterOpen] = useState(false);
+  const [filterIds, setFilterIds] = useState<string[]>([]);
+  const [matchAll, setMatchAll] = useState(true);
+
+  useBackHandler(menuOpen, () => setMenuOpen(false));
+  useBackHandler(organizing, () => setOrganizing(false));
   // localStorage only exists in the browser, so it is read after the first render
   useEffect(() => {
     setCustom(loadCustom());
@@ -964,16 +1104,35 @@ export default function CocktailExplorer() {
     return { delay, duration };
   });
 
-  const groups: Group[] = [
-    {
-      title: "Cocktails",
-      ids: cocktailIds.filter((id) => data.cocktails[id].type !== "shot"),
-    },
-    {
-      title: "Shots",
-      ids: cocktailIds.filter((id) => data.cocktails[id].type === "shot"),
-    },
-  ].filter((g) => g.ids.length > 0);
+  const org = custom.organisation;
+
+  // Ingredients of every recipe (base + variants), for the filter
+  const recipeIngredients = useMemo(() => {
+    const map: Record<string, Set<string>> = {};
+    for (const [id, c] of Object.entries(data.cocktails)) map[id] = new Set(usedIngredientIds(c));
+    return map;
+  }, [data]);
+  const availableIngredients = useMemo(
+    () => [...new Set(Object.values(recipeIngredients).flatMap((s) => [...s]))],
+    [recipeIngredients]
+  );
+
+  const activeFilter = filterIds.filter((id) => data.ingredients[id]);
+  const filtering = activeFilter.length > 0;
+  const shownIds = filtering
+    ? cocktailIds.filter((id) => {
+        const has = recipeIngredients[id];
+        return matchAll ? activeFilter.every((i) => has.has(i)) : activeFilter.some((i) => has.has(i));
+      })
+    : cocktailIds;
+
+  const tree = buildTree(shownIds, org, !filtering);
+  const isShotId = (id: string) => data.cocktails[id].type === "shot";
+  const sections = ([
+    ...tree.folders.map((f) => ({ key: f.id, title: f.name, ids: f.ids, folderId: f.id })),
+    { key: "cocktails", title: "Cocktails", ids: tree.loose.filter((id) => !isShotId(id)) },
+    { key: "shots", title: "Shots", ids: tree.loose.filter(isShotId) },
+  ] as Section[]).filter((s) => s.folderId || s.ids.length > 0);
 
   // undefined is the base recipe, followed by every variant
   const options: (string | undefined)[] = [
@@ -1061,6 +1220,10 @@ export default function CocktailExplorer() {
 
   function restoreDeleted() {
     update(restoreHiddenRecipes(custom));
+  }
+
+  function updateOrg(next: Organisation) {
+    update({ ...custom, organisation: next });
   }
 
   // id = null creates an ingredient. For a built-in ingredient the edited copy replaces it.
@@ -1198,13 +1361,38 @@ export default function CocktailExplorer() {
     );
 
   const list = (
-    <RecipeList
-      groups={groups}
-      cocktails={data.cocktails}
-      activeId={cocktailId}
-      onSelect={selectCocktail}
-      onLongPress={setSheetId}
-    />
+    <>
+      <ListToolbar
+        organizing={organizing}
+        filterCount={activeFilter.length}
+        onCreateFolder={() => setFolderDialog({ kind: "create" })}
+        onToggleOrganize={() => setOrganizing((v) => !v)}
+        onFilter={() => setFilterOpen(true)}
+      />
+      {filtering && (
+        <ActiveFilterBar
+          names={activeFilter.map((id) => ({ id, name: data.ingredients[id].name }))}
+          count={shownIds.length}
+          onRemove={(id) => setFilterIds((l) => l.filter((x) => x !== id))}
+          onClear={() => setFilterIds([])}
+        />
+      )}
+      <RecipeList
+        sections={sections}
+        cocktails={data.cocktails}
+        activeId={cocktailId}
+        organizing={organizing}
+        onSelect={selectCocktail}
+        onLongPress={setSheetId}
+        onMoveRecipe={(siblings, id, delta) =>
+          updateOrg(moveRecipe(org, cocktailIds, id, siblings, delta))
+        }
+        onPickFolder={(recipeId) => setFolderDialog({ kind: "move", recipeId })}
+        onMoveFolder={(id, delta) => updateOrg(moveFolder(org, id, delta))}
+        onRenameFolder={(id) => setFolderDialog({ kind: "rename", id })}
+        onDeleteFolder={(id) => setFolderDialog({ kind: "delete", id })}
+      />
+    </>
   );
 
   const footer = (
@@ -1230,6 +1418,7 @@ export default function CocktailExplorer() {
 
   return (
     <div className="flex h-dvh flex-col md:flex-row">
+      <BackButton/>
       {/* Phone top bar: just the title, the menu button lives at the bottom right */}
       <header className="flex shrink-0 items-center justify-center border-b border-white/10 bg-[#1f1f1f] px-3 pb-3 pt-[max(env(safe-area-inset-top),2.25rem)] md:hidden">
         <span className="font-medium">Maë’s Brewery</span>
@@ -1332,6 +1521,10 @@ export default function CocktailExplorer() {
           onEdit={() => openEditor(sheetId)}
           onDelete={() => deleteRecipe(sheetId)}
           onClose={() => setSheetId(null)}
+          onMove={() => {
+            setFolderDialog({ kind: "move", recipeId: sheetId });
+            setSheetId(null);
+          }}
         />
       )}
 
@@ -1373,6 +1566,47 @@ export default function CocktailExplorer() {
           onCancel={() => setEditor(null)}
         />
       )}
+
+      {filterOpen && (
+        <IngredientFilter
+          ingredients={data.ingredients}
+          available={availableIngredients}
+          selected={activeFilter}
+          matchAll={matchAll}
+          resultCount={shownIds.length}
+          onToggle={(id) =>
+            setFilterIds((l) => (l.includes(id) ? l.filter((x) => x !== id) : [...l, id]))
+          }
+          onMatchAll={setMatchAll}
+          onClear={() => setFilterIds([])}
+          onClose={() => setFilterOpen(false)}
+        />
+      )}
+
+      <FolderDialogs
+        state={folderDialog}
+        org={org}
+        recipeName={
+          folderDialog?.kind === "move" ? data.cocktails[folderDialog.recipeId]?.name : undefined
+        }
+        onClose={() => setFolderDialog(null)}
+        onCreate={(name) => {
+          updateOrg(createFolder(org, name));
+          setFolderDialog(null);
+        }}
+        onRename={(id, name) => {
+          updateOrg(renameFolder(org, id, name));
+          setFolderDialog(null);
+        }}
+        onDelete={(id) => {
+          updateOrg(deleteFolder(org, id));
+          setFolderDialog(null);
+        }}
+        onMove={(recipeId, folderId) => {
+          updateOrg(moveToFolder(org, recipeId, folderId));
+          setFolderDialog(null);
+        }}
+      />
 
       {/* Main area */}
       <main

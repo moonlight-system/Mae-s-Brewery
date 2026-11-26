@@ -10,6 +10,7 @@ import {
   type Variant,
 } from "../lib/recipes";
 import ColorPicker from "./ColorPicker";
+import { useBackHandler } from "../lib/backStack";
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70";
@@ -662,6 +663,8 @@ export default function RecipeEditor({
   );
   const [error, setError] = useState<string | null>(null);
 
+  useBackHandler(true, onCancel);
+  
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onCancel();

@@ -5,6 +5,7 @@ import type { Cocktail, Ingredient } from "../lib/recipes";
 import { usedIngredientIds } from "../lib/customRecipes";
 import ColorPicker from "./ColorPicker";
 import Dialog from "./Dialog";
+import { useBackHandler } from "../lib/backStack";
 
 const focusRing =
   "focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/70";
@@ -117,6 +118,8 @@ export default function IngredientManager({
   const [newColor, setNewColor] = useState(NEW_COLOR);
   const [pendingId, setPendingId] = useState<string | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+
+  useBackHandler(true, onClose);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {

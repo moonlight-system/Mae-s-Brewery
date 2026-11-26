@@ -294,6 +294,7 @@ export function runImport(
   now: number = Date.now()
 ): { next: CustomData; plan: ImportPlan } {
   const next: CustomData = {
+    ...custom,
     cocktails: { ...custom.cocktails },
     ingredients: { ...custom.ingredients },
     hidden: [...custom.hidden],
